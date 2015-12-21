@@ -1,5 +1,8 @@
 package bacula
 
+/* These tests need a mysql bacula database with Client and Job tables running
+on localhost. */
+
 import (
 	"testing"
 )
@@ -17,7 +20,7 @@ func TestClients(t *testing.T) {
 		t.Error(err)
 	}
 	defer db.Close()
-	
+
 	cs, err := db.Clients()
 	if err != nil {
 		t.Error(err)
@@ -32,7 +35,7 @@ func TestLevelJobs(t *testing.T) {
 		t.Error(err)
 	}
 	defer db.Close()
-	
+
 	cs, err := db.Clients()
 	if err != nil {
 		t.Error(err)

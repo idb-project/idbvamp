@@ -1,18 +1,22 @@
+/*Package bacula extracts client and job information from a
+bacula database. */
 package bacula
 
 import (
-	"time"
-	"errors"
 	"database/sql"
-	_ "github.com/go-sql-driver/mysql"
+	"errors"
+	_ "github.com/go-sql-driver/mysql" // database/sql driver
+	"time"
 )
 
+// ErrUnknownDriver is returned if a driver is used for which no statements can be prepared.
 var ErrUnknownDriver = errors.New("Unknown database driver.")
 
+// DB is a bacula database connection.
 type DB struct {
 	*sql.DB
 	levelJobsStmt *sql.Stmt
-	clientsStmt *sql.Stmt
+	clientsStmt   *sql.Stmt
 }
 
 // NewDB returns a new bacula database connection.
@@ -49,15 +53,17 @@ func (db *DB) Close() error {
 	return db.DB.Close()
 }
 
+// initStmts initializes SQL statements for different database drivers.
 func (db *DB) initStmts(driverName string) error {
 	switch driverName {
-		case "mysql":
-			return db.initMysqlStmts()
-		default:
-			return ErrUnknownDriver
+	case "mysql":
+		return db.initMysqlStmts()
+	default:
+		return ErrUnknownDriver
 	}
 }
 
+// initMysqlStmts initializes SQL statements for usage with MySQL (github.com/go-sql-driver/mysql)
 func (db *DB) initMysqlStmts() error {
 	var err error
 	db.levelJobsStmt, err = db.DB.Prepare("SELECT Level,RealEndTime FROM Job WHERE ClientID=? AND Level=? ORDER BY RealEndTime")
@@ -75,14 +81,14 @@ func (db *DB) initMysqlStmts() error {
 
 // Client is a entry of baculas Client table.
 type Client struct {
-	ClientID	uint
-	Name	string
+	ClientID uint
+	Name     string
 }
 
 // Job is a entry of baculas Job table.
 type Job struct {
-	Level	string
-	RealEndTime	time.Time
+	Level       string
+	RealEndTime time.Time
 }
 
 // Clients retrieves all clients.
