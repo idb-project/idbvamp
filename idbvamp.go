@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"strings"
-	"time"
 	"git.office.bytemine.net/schuller/idbvamp/bacula"
 	"git.office.bytemine.net/schuller/idbclient"
 	"git.office.bytemine.net/schuller/wooly"
@@ -11,24 +10,42 @@ import (
 )
 
 func main() {
-	db, err := bacula.NewDB("mysql", "root:@tcp(127.0.0.1:3306)/bacula?parseTime=true")
+	c := newConfig()
+	err := c.load(*configFile)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	idb := idbclient.NewIdb("idb-dev.office.bytemine.net", true)
+	db, err := bacula.NewDB("mysql", c.Dsn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	idb := idbclient.NewIdb(c.Url, c.InsecureSkipVerify)
+	if c.Debug {
+		idb.Debug = true
+	}
 
 	cs := make(chan bacula.Client)
 	ms := make(chan idbclient.Machine)
-	go clients(db, cs)
-	go jobs(db, ms, cs)
+	errs := make(chan error)
 
-	sendMachines(idb, ms)
+	go logErrors(errs)
+	go clients(db, errs, cs)
+	go jobs(db, errs, ms, cs)
+	sendMachines(idb, errs, ms)
 }
 
-func clients(db *bacula.DB, cs chan bacula.Client) {
+func logErrors(errs chan error) {
+	for v := range errs {
+		log.Println(v)
+	}
+}
+
+func clients(db *bacula.DB, errs chan error, cs chan bacula.Client) {
 	clients, err := db.Clients()
 	if err != nil {
+		errs <- err
 		close(cs)
 	}
 
@@ -38,23 +55,26 @@ func clients(db *bacula.DB, cs chan bacula.Client) {
 	close(cs)
 }
 
-func jobs(db *bacula.DB, ms chan idbclient.Machine, cs chan bacula.Client) {
+func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bacula.Client) {
 	for c := range(cs) {
 		incJobs, err := db.LevelJobs("I", c)
 
 		if err != nil {
+			errs <- err
 			continue
 		}
 
 		diffJobs, err := db.LevelJobs("D", c)
 
 		if err != nil {
+			errs <- err
 			continue
 		}
 
 		fullJobs, err := db.LevelJobs("F", c)
 
 		if err != nil {
+			errs <- err
 			continue
 		}
 
@@ -76,16 +96,17 @@ func jobs(db *bacula.DB, ms chan idbclient.Machine, cs chan bacula.Client) {
 		}
 
 		ms <- m
-
-		log.Println(m)
 	}
 
 	close(ms)
 }
 
-func sendMachines(idb *idbclient.Idb, ms chan idbclient.Machine) {
+func sendMachines(idb *idbclient.Idb, errs chan error, ms chan idbclient.Machine) {
 	for m := range ms {
 		_, err := idb.UpdateMachine(&m, true)
-		log.Println(err)
+		if err != nil {
+			log.Printf("%+v\n", m)
+			errs <- err
+		}
 	}
 }
