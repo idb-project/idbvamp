@@ -28,20 +28,25 @@ func main() {
 
 	cs := make(chan bacula.Client)
 	ms := make(chan idbclient.Machine)
+
+	// error channel for the goroutines
 	errs := make(chan error)
 
+	// log all errors
 	go logErrors(errs)
 	go clients(db, errs, cs)
 	go jobs(db, errs, ms, cs)
-	sendMachines(idb, errs, ms)
+	sendMachines(idb, errs, ms, c.Create)
 }
 
+// logErrors logs all errors received on a chan error.
 func logErrors(errs chan error) {
 	for v := range errs {
 		log.Println(v)
 	}
 }
 
+// clients retrieves all clients from the bacula database and writes them to channel cs.
 func clients(db *bacula.DB, errs chan error, cs chan bacula.Client) {
 	clients, err := db.Clients()
 	if err != nil {
@@ -55,6 +60,8 @@ func clients(db *bacula.DB, errs chan error, cs chan bacula.Client) {
 	close(cs)
 }
 
+// jobs reads clients from channel cs and retrieves their jobs from the database, writing machines filled
+// with the job data to channel ms.
 func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bacula.Client) {
 	for c := range(cs) {
 		incJobs, err := db.LevelJobs("I", c)
@@ -101,9 +108,10 @@ func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bac
 	close(ms)
 }
 
-func sendMachines(idb *idbclient.Idb, errs chan error, ms chan idbclient.Machine) {
+// sendMachines reads from channel ms and updates every machine in the idb.
+func sendMachines(idb *idbclient.Idb, errs chan error, ms chan idbclient.Machine, create bool) {
 	for m := range ms {
-		_, err := idb.UpdateMachine(&m, true)
+		_, err := idb.UpdateMachine(&m, create)
 		if err != nil {
 			log.Printf("%+v\n", m)
 			errs <- err
