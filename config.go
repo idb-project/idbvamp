@@ -14,9 +14,6 @@ const exampleFilename = "idbvamp.json.example"
 
 var configFile = flag.String("config", "/etc/bytemine/idbvamp.json", "config file")
 var writeExample = flag.Bool("example", false, "write an example config to "+exampleFilename+" in the current dir.")
-var debug = flag.Bool("debug", false, "debug mode")
-var insecureSkipVerify = flag.Bool("skip", false, "ignore SSL errors")
-var create = flag.Bool("create", false, "create machines not existing in idb")
 var showVersion = flag.Bool("version", false, "display version and exit")
 
 func init() {
