@@ -3,6 +3,7 @@ bacula database. */
 package bacula
 
 import (
+	"net/url"
 	"database/sql"
 	"errors"
 	_ "github.com/go-sql-driver/mysql" // database/sql driver
@@ -12,6 +13,9 @@ import (
 // ErrUnknownDriver is returned if a driver is used for which no statements can be prepared.
 var ErrUnknownDriver = errors.New("Unknown database driver.")
 
+// ErrDSNParam is returned if the DSN is missing the parseTime parameter or when parseTime is not set to true
+var ErrDSNParam = errors.New("Missing DSN parameters.")
+
 // DB is a bacula database connection.
 type DB struct {
 	*sql.DB
@@ -19,10 +23,34 @@ type DB struct {
 	clientsStmt   *sql.Stmt
 }
 
+// checkDSNParams checks for parseTime=true in the DSN, returning ErrDsnParam if not present.
+func checkDSNParams(dsn string) error {
+	dsnURL, err := url.Parse(dsn)
+	if err != nil {
+		return err
+	}
+
+	params, err := url.ParseQuery(dsnURL.RawQuery)
+	if err != nil {
+		return err
+	}
+
+	if params.Get("parseTime") != "true" {
+		return ErrDSNParam
+	}
+
+	return nil
+}
+
 // NewDB returns a new bacula database connection.
 // You should have parseTime=true as parameter in your dataSourceName, eg.
 // bacula:@tcp(127.0.0.1:3306)/bacula?parseTime=true
 func NewDB(driverName, dataSourceName string) (*DB, error) {
+	err := checkDSNParams(dataSourceName)
+	if err != nil {
+		return nil, err
+	}
+
 	x, err := sql.Open(driverName, dataSourceName)
 	if err != nil {
 		return nil, err
