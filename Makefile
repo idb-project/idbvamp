@@ -1,5 +1,8 @@
 VERSION := 0.0.1
 
+doc:
+	go doc > README
+
 build:
 	go build -o bytemine-idbvamp-$(VERSION)
 
