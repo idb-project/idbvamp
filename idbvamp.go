@@ -3,8 +3,8 @@ package main
 import (
 	"log"
 	"strings"
-	"git.office.bytemine.net/schuller/idbvamp/bacula"
-	"git.office.bytemine.net/schuller/idbclient"
+	"git.office.bytemine.net/apps/idbvamp/bacula"
+	"git.office.bytemine.net/apps/idbclient"
 	"git.office.bytemine.net/schuller/wooly"
 
 )
