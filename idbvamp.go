@@ -1,14 +1,17 @@
-/* Command idbvamp extracts last backup runs from a bacula MySQL database putting them into IDB.
-
+/*Command idbvamp extracts last backup runs from a bacula MySQL database putting them into IDB.
 It is supposed to be run regularly by cron.
 
-Command line arguments:
+Command line arguments
+
+The following command line arguments are supported:
   -config string
     	config file (default "/etc/bytemine/idbvamp.json")
   -example
     	write an example config to idbvamp.json.example in the current dir.
   -version
     	display version and exit
+
+Configuration file
 
 The configuration is a JSON file with the following fields.
 	Create: boolean, should machines not already present in the IDB be created
