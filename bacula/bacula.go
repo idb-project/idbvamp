@@ -3,10 +3,10 @@ bacula database. */
 package bacula
 
 import (
-	"net/url"
 	"database/sql"
 	"errors"
 	_ "github.com/go-sql-driver/mysql" // database/sql driver
+	"net/url"
 	"time"
 )
 
@@ -94,7 +94,7 @@ func (db *DB) initStmts(driverName string) error {
 // initMysqlStmts initializes SQL statements for usage with MySQL (github.com/go-sql-driver/mysql)
 func (db *DB) initMysqlStmts() error {
 	var err error
-	db.levelJobsStmt, err = db.DB.Prepare("SELECT Level,RealEndTime FROM Job WHERE ClientID=? AND Level=? ORDER BY RealEndTime")
+	db.levelJobsStmt, err = db.DB.Prepare("SELECT Level,RealEndTime,JobBytes FROM Job WHERE ClientID=? AND Level=? ORDER BY RealEndTime")
 	if err != nil {
 		return err
 	}
@@ -116,6 +116,7 @@ type Client struct {
 // Job is a entry of baculas Job table.
 type Job struct {
 	Level       string
+	Bytes       int64
 	RealEndTime time.Time
 }
 
@@ -160,7 +161,7 @@ func (db *DB) LevelJobs(level string, c Client) ([]Job, error) {
 
 	for rows.Next() {
 		var j Job
-		err2 := rows.Scan(&j.Level, &j.RealEndTime)
+		err2 := rows.Scan(&j.Level, &j.RealEndTime, &j.Bytes)
 		if err2 != nil {
 			err = err2
 			continue

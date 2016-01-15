@@ -8,14 +8,14 @@ import (
 )
 
 func TestNewDB(t *testing.T) {
-	_, err := NewDB("mysql", "root:@tcp(127.0.0.1:3306)/bacula")
+	_, err := NewDB("mysql", "root:@tcp(127.0.0.1:3306)/bacula?parseTime=true")
 	if err != nil {
 		t.Error(err)
 	}
 }
 
 func TestClients(t *testing.T) {
-	db, err := NewDB("mysql", "root:@tcp(127.0.0.1:3306)/bacula")
+	db, err := NewDB("mysql", "root:@tcp(127.0.0.1:3306)/bacula?parseTime=true")
 	if err != nil {
 		t.Error(err)
 	}
