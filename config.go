@@ -88,8 +88,8 @@ func (c *config) load(file string) error {
 }
 
 // Write the JSON-marshaled config to a file.
-func (conf *config) write(file string) error {
-	buf, err := json.MarshalIndent(conf, "", "\t")
+func (c *config) write(file string) error {
+	buf, err := json.MarshalIndent(c, "", "\t")
 
 	if err != nil {
 		return err
