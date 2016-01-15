@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 )
 
-const version = "0.0.1"
+const version = "0.0.2"
 const exampleFilename = "idbvamp.json.example"
 
 var configFile = flag.String("config", "/etc/bytemine/idbvamp.json", "config file")
@@ -20,7 +20,7 @@ func init() {
 	flag.Parse()
 
 	if *showVersion {
-		log.Println(version)
+		fmt.Println(version)
 		os.Exit(0)
 	}
 
