@@ -2,6 +2,7 @@ package main
 
 import (
 	"git.office.bytemine.net/idb/idbclient"
+	"git.office.bytemine.net/idb/idbclient/machine"
 	"git.office.bytemine.net/idb/idbvamp/bacula"
 	"log"
 	"strings"
@@ -26,7 +27,7 @@ func main() {
 	}
 
 	cs := make(chan bacula.Client)
-	ms := make(chan idbclient.Machine)
+	ms := make(chan machine.Machine)
 
 	// error channel for the goroutines
 	errs := make(chan error)
@@ -61,7 +62,7 @@ func clients(db *bacula.DB, errs chan error, cs chan bacula.Client) {
 
 // jobs reads clients from channel cs and retrieves their jobs from the database, writing machines filled
 // with the job data to channel ms.
-func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bacula.Client) {
+func jobs(db *bacula.DB, errs chan error, ms chan machine.Machine, cs chan bacula.Client) {
 	for c := range cs {
 		incJobs, err := db.LevelJobs("I", c)
 
@@ -84,7 +85,7 @@ func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bac
 			continue
 		}
 
-		var m idbclient.Machine
+		var m machine.Machine
 
 		var timeFull time.Time
 		var timeInc time.Time
@@ -117,7 +118,7 @@ func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bac
 			sizeDiff += v.Bytes
 		}
 
-		m.Backup(strings.TrimRight(c.Name, "-fd"), idbclient.BackupBrandBacula, timeFull, timeInc, timeDiff, sizeFull, sizeInc, sizeDiff)
+		m.Backup(strings.TrimRight(c.Name, "-fd"), machine.BackupBrandBacula, timeFull, timeInc, timeDiff, sizeFull, sizeInc, sizeDiff)
 
 		ms <- m
 	}
@@ -126,7 +127,7 @@ func jobs(db *bacula.DB, errs chan error, ms chan idbclient.Machine, cs chan bac
 }
 
 // sendMachines reads from channel ms and updates every machine in the idb.
-func sendMachines(idb *idbclient.Idb, errs chan error, ms chan idbclient.Machine, create bool) {
+func sendMachines(idb *idbclient.Idb, errs chan error, ms chan machine.Machine, create bool) {
 	for m := range ms {
 		_, err := idb.UpdateMachine(&m, create)
 		if err != nil {
