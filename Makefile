@@ -7,12 +7,12 @@ doc:
 	go doc > README
 
 build:
-	go build -o bytemine-idbvamp-$(VERSION)
+	go build -o bytemine-idbvamp
 
 distfile: doc build
 	rm -rf /tmp/bytemine-idbvamp-$(VERSION)
 	mkdir /tmp/bytemine-idbvamp-$(VERSION)
-	cp README bytemine-idbvamp-$(VERSION) /tmp/bytemine-idbvamp-$(VERSION)/
+	cp README bytemine-idbvamp /tmp/bytemine-idbvamp-$(VERSION)/
 	cd /tmp && tar czfv /tmp/bytemine-idbvamp-$(VERSION).tgz \
 		bytemine-idbvamp-$(VERSION)/
 	sha256sum /tmp/bytemine-idbvamp-$(VERSION).tgz
