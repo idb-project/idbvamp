@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-const version = "0.0.4"
+const version = "0.0.5"
 const exampleFilename = "idbvamp.json.example"
 
 var configFile = flag.String("config", "/etc/bytemine/idbvamp.json", "config file")
@@ -41,6 +41,9 @@ type config struct {
 	// IDB URL, eg. idb.office.bytemine.net
 	Url string
 
+	// IDB API Token
+	ApiToken string
+
 	// Allow invalid SSL certificate chains
 	InsecureSkipVerify bool
 
@@ -58,6 +61,7 @@ func example() *config {
 	c.Create = false
 	c.Dsn = "root:@tcp(127.0.0.1:3306)/bacula?parseTime=true"
 	c.Url = "idb.office.bytemine.net"
+	c.ApiToken = "myVerySecretToken"
 	c.InsecureSkipVerify = false
 	c.Debug = false
 	return c
@@ -82,6 +86,10 @@ func (c *config) load(file string) error {
 
 	if c.Url == "" {
 		return errors.New("Url can't be empty")
+	}
+
+	if c.ApiToken == "" {
+		return errors.New("ApiToken can't be empty")
 	}
 
 	return nil

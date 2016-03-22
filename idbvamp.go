@@ -21,7 +21,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	idb := idbclient.NewIdb(c.Url, c.InsecureSkipVerify)
+	idb := idbclient.NewIdb(c.Url, c.ApiToken, c.InsecureSkipVerify)
 	if c.Debug {
 		idb.Debug = true
 	}
