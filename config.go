@@ -38,7 +38,7 @@ type config struct {
 	// Data Source Name in the format like described in https://github.com/go-sql-driver/mysql#dsn-data-source-name . Example: root:@tcp(127.0.0.1:3306)/bacula?parseTime=true
 	Dsn string
 
-	// IDB URL, eg. idb.office.bytemine.net
+	// IDB URL, eg. https://idb.office.bytemine.net
 	Url string
 
 	// IDB API Token
@@ -60,7 +60,7 @@ func example() *config {
 	c := &config{}
 	c.Create = false
 	c.Dsn = "root:@tcp(127.0.0.1:3306)/bacula?parseTime=true"
-	c.Url = "idb.office.bytemine.net"
+	c.Url = "https://idb.example.com"
 	c.ApiToken = "myVerySecretToken"
 	c.InsecureSkipVerify = false
 	c.Debug = false
