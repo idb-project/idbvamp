@@ -1,30 +1,22 @@
-#VERSION := $(shell ./bytemine-idbvamp -version)
-VENDOR=vendor
+NAME=idbvamp
 VENDORGIT=git clone --depth=1
 
 vendors:
 	rm -rf vendor
-	mkdir -p vendor/git.office.bytemine.net/idb
-	cd vendor/git.office.bytemine.net/idb && $(VENDORGIT) --branch v2 gitlab@git.office.bytemine.net:idb/idbclient.git && cd idbclient && rm -rf .git
 	mkdir -p vendor/github.com/go-sql-driver
 	cd vendor/github.com/go-sql-driver && $(VENDORGIT) https://github.com/go-sql-driver/mysql && cd mysql && rm -rf .git
 
-build:
-	go build -o bytemine-idbvamp
-
 doc:
-	go doc > README
+	godoc . | head -n -4 > README
 
-distfile: doc build
-	$(eval VERSION := $(shell ./bytemine-idbvamp -version))
-	rm -rf /tmp/bytemine-idbvamp-$(VERSION)
-	mkdir /tmp/bytemine-idbvamp-$(VERSION)
-	cp README bytemine-idbvamp /tmp/bytemine-idbvamp-$(VERSION)/
-	cd /tmp && tar czfv /tmp/bytemine-idbvamp-$(VERSION).tgz \
-		bytemine-idbvamp-$(VERSION)/
-	sha256sum /tmp/bytemine-idbvamp-$(VERSION).tgz
+build:
+	go install
 
-upload: distfile
-	scp /tmp/bytemine-idbvamp-$(VERSION).tgz \
-		bytemine-www@appliance.bytemine.net:/data/www/allgemein/files.bytemine.net/
-
+distfile: build doc
+	$(eval VERSION := $(shell $(GOPATH)/bin/$(NAME) -version))
+	rm -rf /tmp/bytemine-$(NAME)-$(VERSION)
+	mkdir /tmp/bytemine-$(NAME)-$(VERSION)
+	cp $(GOPATH)/bin/$(NAME) /tmp/bytemine-$(NAME)-$(VERSION)/bytemine-$(NAME)
+	cp README /tmp/bytemine-$(NAME)-$(VERSION)/
+	cd /tmp && tar czfv /tmp/bytemine-$(NAME)-$(VERSION).tgz bytemine-$(NAME)-$(VERSION)/
+	sha256sum /tmp/bytemine-$(NAME)-$(VERSION).tgz

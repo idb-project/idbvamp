@@ -38,7 +38,7 @@ type config struct {
 	// Data Source Name in the format like described in https://github.com/go-sql-driver/mysql#dsn-data-source-name . Example: root:@tcp(127.0.0.1:3306)/bacula?parseTime=true
 	Dsn string
 
-	// IDB URL, eg. https://idb.office.bytemine.net
+	// IDB URL, eg. https://idb.example.com
 	Url string
 
 	// IDB API Token

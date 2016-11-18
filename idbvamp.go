@@ -1,9 +1,9 @@
 package main
 
 import (
-	"git.office.bytemine.net/idb/idbclient"
-	"git.office.bytemine.net/idb/idbclient/machine"
-	"git.office.bytemine.net/idb/idbvamp/bacula"
+	"github.com/idb-project/idbclient"
+	"github.com/idb-project/idbclient/machine"
+	"github.com/idb-project/idbvamp/bacula"
 	"log"
 	"strings"
 	"time"
