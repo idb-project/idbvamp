@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-const version = "0.0.5"
+const version = "0.1.0"
 const exampleFilename = "idbvamp.json.example"
 
 var configFile = flag.String("config", "/etc/bytemine/idbvamp.json", "config file")

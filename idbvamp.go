@@ -1,13 +1,25 @@
 package main
 
 import (
-	"github.com/idb-project/idbclient"
-	"github.com/idb-project/idbclient/machine"
-	"github.com/idb-project/idbvamp/bacula"
+	"crypto/tls"
+	"fmt"
 	"log"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
+
+	"github.com/go-openapi/runtime/client"
+	"github.com/go-openapi/strfmt"
+
+	idbclient "github.com/idb-project/go-idb/client"
+	"github.com/idb-project/go-idb/client/machines"
+	"github.com/idb-project/go-idb/models"
+	"github.com/idb-project/idbvamp/bacula"
 )
+
+const backupBrandBacula = 1
+const timeFormat = "2006-01-02 15:04:05"
 
 func main() {
 	c := newConfig()
@@ -21,17 +33,29 @@ func main() {
 		log.Fatal(err)
 	}
 
-	idb, err := idbclient.NewIdb(c.Url, c.ApiToken, c.InsecureSkipVerify)
+	// Use a http.Client to enable ignoring of ssl verification errors
+	httpclient := &http.Client{Transport: &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: c.InsecureSkipVerify}}}
+
+	idburl, err := url.Parse(c.Url)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	if c.Debug {
-		idb.Debug = true
-	}
+	address := fmt.Sprintf("%v:%v", idburl.Hostname(), idburl.Port())
+
+	trans := client.NewWithClient(address, "/", []string{"http"}, httpclient)
+
+	// Set up authentication in transport
+	apiKeyHeaderAuth := client.APIKeyAuth("X-IDB-API-Token", "header", c.ApiToken)
+	trans.DefaultAuthentication = apiKeyHeaderAuth
+
+	// Set debug
+	trans.Debug = c.Debug
+
+	idb := idbclient.New(trans, strfmt.Default)
 
 	cs := make(chan bacula.Client)
-	ms := make(chan machine.Machine)
+	ms := make(chan models.Machine)
 
 	// error channel for the goroutines
 	errs := make(chan error)
@@ -66,7 +90,7 @@ func clients(db *bacula.DB, errs chan error, cs chan bacula.Client) {
 
 // jobs reads clients from channel cs and retrieves their jobs from the database, writing machines filled
 // with the job data to channel ms.
-func jobs(db *bacula.DB, errs chan error, ms chan machine.Machine, cs chan bacula.Client) {
+func jobs(db *bacula.DB, errs chan error, ms chan models.Machine, cs chan bacula.Client) {
 	for c := range cs {
 		incJobs, err := db.LevelJobs("I", c)
 
@@ -89,7 +113,7 @@ func jobs(db *bacula.DB, errs chan error, ms chan machine.Machine, cs chan bacul
 			continue
 		}
 
-		var m machine.Machine
+		var m models.Machine
 
 		var timeFull time.Time
 		var timeInc time.Time
@@ -122,7 +146,22 @@ func jobs(db *bacula.DB, errs chan error, ms chan machine.Machine, cs chan bacul
 			sizeDiff += v.Bytes
 		}
 
-		m.Backup(strings.TrimRight(c.Name, "-fd"), machine.BackupBrandBacula, timeFull, timeInc, timeDiff, sizeFull, sizeInc, sizeDiff)
+		m.Fqdn = strings.TrimRight(c.Name, "-fd")
+		m.BackupBrand = backupBrandBacula
+		if !timeFull.IsZero() {
+			m.BackupLastFullRun = timeFull.Format(timeFormat)
+			m.BackupLastFullSize = sizeFull
+		}
+
+		if !timeInc.IsZero() {
+			m.BackupLastIncRun = timeInc.Format(timeFormat)
+			m.BackupLastIncSize = sizeInc
+		}
+
+		if !timeDiff.IsZero() {
+			m.BackupLastDiffRun = timeDiff.Format(timeFormat)
+			m.BackupLastDiffSize = sizeDiff
+		}
 
 		ms <- m
 	}
@@ -131,12 +170,57 @@ func jobs(db *bacula.DB, errs chan error, ms chan machine.Machine, cs chan bacul
 }
 
 // sendMachines reads from channel ms and updates every machine in the idb.
-func sendMachines(idb *idbclient.Idb, errs chan error, ms chan machine.Machine, create bool) {
+func sendMachines(idb *idbclient.Idb, errs chan error, ms chan models.Machine, create bool) {
 	for m := range ms {
-		_, err := idb.UpdateMachine(&m, create)
-		if err != nil {
-			log.Printf("%+v\n", m)
-			errs <- err
+		_, err := idb.Machines.GetAPIV3MachinesRfqdn(&machines.GetAPIV3MachinesRfqdnParams{Rfqdn: m.Fqdn})
+		switch {
+		// machine not found, create
+		case create && err != nil:
+			params := &machines.PostAPIV3MachinesParams{}
+			params.SetFqdn(m.Fqdn)
+			params.SetBackupBrand(&m.BackupBrand)
+			if m.BackupLastFullRun != "" {
+				params.SetBackupLastFullRun(&m.BackupLastFullRun)
+				params.SetBackupLastFullSize(&m.BackupLastFullSize)
+			}
+			if m.BackupLastIncRun != "" {
+				params.SetBackupLastIncRun(&m.BackupLastIncRun)
+				params.SetBackupLastIncSize(&m.BackupLastIncSize)
+			}
+			if m.BackupLastDiffRun != "" {
+				params.SetBackupLastDiffRun(&m.BackupLastDiffRun)
+				params.SetBackupLastDiffSize(&m.BackupLastDiffSize)
+			}
+			_, err := idb.Machines.PostAPIV3Machines(params)
+			if err != nil {
+				errs <- err
+				continue
+			}
+		// machine not found, but shouldn't create. skip to next machine
+		case !create && err != nil:
+			continue
+		// machine found, update
+		case create && err == nil || !create && err == nil:
+			params := &machines.PutAPIV3MachinesRfqdnParams{}
+			params.SetFqdn(m.Fqdn)
+			params.SetBackupBrand(&m.BackupBrand)
+			if m.BackupLastFullRun != "" {
+				params.SetBackupLastFullRun(&m.BackupLastFullRun)
+				params.SetBackupLastFullSize(&m.BackupLastFullSize)
+			}
+			if m.BackupLastIncRun != "" {
+				params.SetBackupLastIncRun(&m.BackupLastIncRun)
+				params.SetBackupLastIncSize(&m.BackupLastIncSize)
+			}
+			if m.BackupLastDiffRun != "" {
+				params.SetBackupLastDiffRun(&m.BackupLastDiffRun)
+				params.SetBackupLastDiffSize(&m.BackupLastDiffSize)
+			}
+			_, err := idb.Machines.PutAPIV3MachinesRfqdn(params)
+			if err != nil {
+				errs <- err
+				continue
+			}
 		}
 	}
 }
