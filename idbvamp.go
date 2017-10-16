@@ -147,6 +147,7 @@ func jobs(db *bacula.DB, errs chan error, ms chan models.Machine, cs chan bacula
 		}
 
 		m.Fqdn = strings.TrimRight(c.Name, "-fd")
+		m.BackupType = 1
 		m.BackupBrand = backupBrandBacula
 		if !timeFull.IsZero() {
 			m.BackupLastFullRun = timeFull.Format(timeFormat)
