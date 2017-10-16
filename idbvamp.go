@@ -13,7 +13,7 @@ import (
 	"github.com/go-openapi/strfmt"
 
 	idbclient "github.com/idb-project/go-idb/client"
-	"github.com/idb-project/go-idb/client/machines"
+	"github.com/idb-project/go-idb/client/api"
 	"github.com/idb-project/go-idb/models"
 	"github.com/idb-project/idbvamp/bacula"
 )
@@ -172,27 +172,19 @@ func jobs(db *bacula.DB, errs chan error, ms chan models.Machine, cs chan bacula
 // sendMachines reads from channel ms and updates every machine in the idb.
 func sendMachines(idb *idbclient.Idb, errs chan error, ms chan models.Machine, create bool) {
 	for m := range ms {
-		_, err := idb.Machines.GetAPIV3MachinesRfqdn(&machines.GetAPIV3MachinesRfqdnParams{Rfqdn: m.Fqdn})
+		params := api.NewGetAPIV3MachinesRfqdnParams()
+		params.SetRfqdn(m.Fqdn)
+		_, err := idb.API.GetAPIV3MachinesRfqdn(params)
+
 		switch {
 		// machine not found, create
 		case create && err != nil:
-			params := &machines.PostAPIV3MachinesParams{}
-			params.SetFqdn(m.Fqdn)
-			params.SetBackupBrand(&m.BackupBrand)
-			if m.BackupLastFullRun != "" {
-				params.SetBackupLastFullRun(&m.BackupLastFullRun)
-				params.SetBackupLastFullSize(&m.BackupLastFullSize)
-			}
-			if m.BackupLastIncRun != "" {
-				params.SetBackupLastIncRun(&m.BackupLastIncRun)
-				params.SetBackupLastIncSize(&m.BackupLastIncSize)
-			}
-			if m.BackupLastDiffRun != "" {
-				params.SetBackupLastDiffRun(&m.BackupLastDiffRun)
-				params.SetBackupLastDiffSize(&m.BackupLastDiffSize)
-			}
-			_, err := idb.Machines.PostAPIV3Machines(params)
+			params := api.NewPostAPIV3MachinesParams()
+			params.SetMachine(&m)
+
+			_, err := idb.API.PostAPIV3Machines(params)
 			if err != nil {
+				log.Fatal(err)
 				errs <- err
 				continue
 			}
@@ -201,23 +193,12 @@ func sendMachines(idb *idbclient.Idb, errs chan error, ms chan models.Machine, c
 			continue
 		// machine found, update
 		case create && err == nil || !create && err == nil:
-			params := &machines.PutAPIV3MachinesRfqdnParams{}
-			params.SetFqdn(m.Fqdn)
-			params.SetBackupBrand(&m.BackupBrand)
-			if m.BackupLastFullRun != "" {
-				params.SetBackupLastFullRun(&m.BackupLastFullRun)
-				params.SetBackupLastFullSize(&m.BackupLastFullSize)
-			}
-			if m.BackupLastIncRun != "" {
-				params.SetBackupLastIncRun(&m.BackupLastIncRun)
-				params.SetBackupLastIncSize(&m.BackupLastIncSize)
-			}
-			if m.BackupLastDiffRun != "" {
-				params.SetBackupLastDiffRun(&m.BackupLastDiffRun)
-				params.SetBackupLastDiffSize(&m.BackupLastDiffSize)
-			}
-			_, err := idb.Machines.PutAPIV3MachinesRfqdn(params)
+			params := api.NewPutAPIV3MachinesRfqdnParams()
+			params.SetMachine(&m)
+
+			_, err := idb.API.PutAPIV3MachinesRfqdn(params)
 			if err != nil {
+				log.Fatal(err)
 				errs <- err
 				continue
 			}
