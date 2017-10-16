@@ -195,6 +195,7 @@ func sendMachines(idb *idbclient.Idb, errs chan error, ms chan models.Machine, c
 		// machine found, update
 		case create && err == nil || !create && err == nil:
 			params := api.NewPutAPIV3MachinesRfqdnParams()
+			params.SetRfqdn(m.Fqdn)
 			params.SetMachine(&m)
 
 			_, err := idb.API.PutAPIV3MachinesRfqdn(params)
